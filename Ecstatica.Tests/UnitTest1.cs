@@ -32,9 +32,24 @@ public class UnitTest1
     {
         using var stream = File.OpenRead(path);
 
-        var magic = stream.ReadStringAscii(6);
+        var type = stream.Read<ushort>(Endianness.BE);
 
-        Assert.AreEqual("mhwanh", magic);
+        if (type == 0x6D68) // "mh"
+        {
+            ExtractRaw(stream);
+        }
+        else
+        {
+            Assert.AreEqual(0, type, $"0x{type:X2}");
+            Assert.Fail($"0x{type:X2}");
+        }
+    }
+
+    private static void ExtractRaw(FileStream stream)
+    {
+        var magic = stream.ReadStringAscii(4);
+
+        Assert.AreEqual("wanh", magic);
 
         var read = stream.Read<ushort>(Endianness.BE);
 
@@ -78,13 +93,13 @@ public class UnitTest1
 
             var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Indexed8, palette, image, pixelWidth);
 
-            WritePng(source, new FilePath(path).AppendToFileName("-image").ChangeExtension(".png"));
+            WritePng(source, new FilePath(stream.Name).AppendToFileName("-image").ChangeExtension(".png"));
         }
 
         {
             var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Gray16, null, depth, pixelWidth * 2);
 
-            WritePng(source, new FilePath(path).AppendToFileName("-depth").ChangeExtension(".png"));
+            WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth").ChangeExtension(".png"));
         }
     }
 
