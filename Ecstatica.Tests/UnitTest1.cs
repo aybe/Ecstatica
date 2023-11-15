@@ -13,6 +13,8 @@ public class UnitTest1 : UnitTestBase
 {
     private const string SourceDirectory = @"C:\Temp\Ecstatica";
 
+    private bool DebugRleBin { get; }
+
     public static IEnumerable<object[]> DecodeGraphicsData()
     {
         return EnumerateFiles(Path.Combine(SourceDirectory, "GRAPHICS"), "*.RAW");
@@ -132,7 +134,10 @@ public class UnitTest1 : UnitTestBase
                 _                     => throw new InvalidOperationException()
             };
 
-            File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
+            if (DebugRleBin)
+            {
+                File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
+            }
 
             var palette = new BitmapPalette(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
 
@@ -166,7 +171,10 @@ public class UnitTest1 : UnitTestBase
                 _                     => throw new InvalidOperationException()
             };
 
-            File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".bin"), depth);
+            if (DebugRleBin)
+            {
+                File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".bin"), depth);
+            }
 
             var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Gray16, null, depth, pw * 2);
 
