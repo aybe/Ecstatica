@@ -99,34 +99,76 @@ public class UnitTest1 : UnitTestBase
         var pixels2 = stream.ReadExactly(length2);
 
         using var rle1 = DecodeRle1(pixels1);
-
-
         using var rle2 = DecodeRle2(pixels2);
-        
-        // Assert.AreEqual(64000, rle1.Length);
 
-        // Assert.AreEqual(128000, rle2.Length);
-
-        var pixelWidth = 320;
-        var pixelHeight = 200;
+        var rle1Length = rle1.Length;
+        var rle2Length = rle2.Length;
 
         var image = rle1.ToArray();
         var depth = rle2.ToArray();
 
-        var bitmapPalette = new BitmapPalette(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
-
         {
+            var dst1 = Math.Abs(rle1Length - 64000);
+            var dst2 = Math.Abs(rle1Length - 128000);
+
+            var res1 = true switch
+            {
+                true when dst1 < dst2 => RawImageResolution.Lo,
+                true when dst2 < dst1 => RawImageResolution.Hi,
+                _                     => throw new InvalidOperationException()
+            };
+
+            var pw = res1 switch
+            {
+                RawImageResolution.Lo => 320,
+                RawImageResolution.Hi => 640,
+                _                     => throw new InvalidOperationException()
+            };
+
+            var ph = res1 switch
+            {
+                RawImageResolution.Lo => 200,
+                RawImageResolution.Hi => 200,
+                _                     => throw new InvalidOperationException()
+            };
+
             File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
 
-            var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Indexed8, bitmapPalette, image, pixelWidth);
+            var palette = new BitmapPalette(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
+
+            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Indexed8, palette, image, pw);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".png"));
         }
 
         {
+            var dst1 = Math.Abs(rle2Length - 64000);
+            var dst2 = Math.Abs(rle2Length - 128000);
+
+            var res1 = true switch
+            {
+                true when dst1 < dst2 => RawImageResolution.Lo,
+                true when dst2 < dst1 => RawImageResolution.Hi,
+                _                     => throw new InvalidOperationException()
+            };
+
+            var pw = res1 switch
+            {
+                RawImageResolution.Lo => 320,
+                RawImageResolution.Hi => 640,
+                _                     => throw new InvalidOperationException()
+            };
+
+            var ph = res1 switch
+            {
+                RawImageResolution.Lo => 200,
+                RawImageResolution.Hi => 100,
+                _                     => throw new InvalidOperationException()
+            };
+
             File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".bin"), depth);
 
-            var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Gray16, null, depth, pixelWidth * 2);
+            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Gray16, null, depth, pw * 2);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".png"));
         }
@@ -421,5 +463,11 @@ public class UnitTest1 : UnitTestBase
         using var stream = File.Create(path);
 
         encoder.Save(stream);
+    }
+
+    private enum RawImageResolution
+    {
+        Lo,
+        Hi
     }
 }
