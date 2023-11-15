@@ -13,6 +13,8 @@ public class UnitTest1 : UnitTestBase
 {
     private const string SourceDirectory = @"C:\Temp\Ecstatica";
 
+    private static BitmapPalette Palette { get; } = new(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
+
     private bool DebugRleBin { get; }
 
     public static IEnumerable<object[]> DecodeGraphicsData()
@@ -111,9 +113,7 @@ public class UnitTest1 : UnitTestBase
                 File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
             }
 
-            var palette = new BitmapPalette(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
-
-            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Indexed8, palette, image, pw);
+            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Indexed8, Palette, image, pw);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".png"));
         }
