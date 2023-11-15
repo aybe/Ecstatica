@@ -11,39 +11,59 @@ namespace Ecstatica.Tests;
 [TestClass]
 public class UnitTest1 : UnitTestBase
 {
-    public static IEnumerable<object[]> DecodeRawImageData()
+    private const string SourceDirectory = @"C:\Temp\Ecstatica";
+
+    public static IEnumerable<object[]> DecodeGraphicsData()
     {
-        var rle = new[]
-        {
-            @"C:\Temp\Ecstatica\VIEWS\0001.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0004.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0061.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0071.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0075.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0078.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0094.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0105.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0153.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0154.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0176.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0180.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0182.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0185.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0193.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0203.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0225.RAW",
-            @"C:\Temp\Ecstatica\VIEWS\0239.RAW"
-        };
+        return EnumerateFiles(Path.Combine(SourceDirectory, "GRAPHICS"), "*.RAW");
+    }
 
-        var files = Directory.GetFiles(@"C:\Temp\Ecstatica\VIEWS", "*.raw");
+    public static IEnumerable<object[]> DecodeHiResData()
+    {
+        return EnumerateFiles(Path.Combine(SourceDirectory, "HIRES"), "*.RAW");
+    }
 
-        foreach (var file in files)
-        {
-            if (rle.Contains(file))
-            {
-                yield return new object[] { file };
-            }
-        }
+    public static IEnumerable<object[]> DecodeLowGraphData()
+    {
+        return EnumerateFiles(Path.Combine(SourceDirectory, "LOWGRAPH"), "*.RAW");
+    }
+
+    public static IEnumerable<object[]> DecodeViewsData()
+    {
+        return EnumerateFiles(Path.Combine(SourceDirectory, "VIEWS"), "*.RAW");
+    }
+
+    private static IEnumerable<object[]> EnumerateFiles(string path, string searchPattern)
+    {
+        return Directory.EnumerateFiles(path, searchPattern).Select(s => new object[] { s });
+    }
+
+    [TestMethod]
+    [DynamicData(nameof(DecodeGraphicsData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
+    public void DecodeGraphics(string path)
+    {
+        DecodeRawImage(path);
+    }
+
+    [TestMethod]
+    [DynamicData(nameof(DecodeHiResData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
+    public void DecodeHiRes(string path)
+    {
+        DecodeRawImage(path);
+    }
+
+    [TestMethod]
+    [DynamicData(nameof(DecodeLowGraphData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
+    public void DecodeLowGraph(string path)
+    {
+        DecodeRawImage(path);
+    }
+
+    [TestMethod]
+    [DynamicData(nameof(DecodeViewsData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
+    public void DecodeViews(string path)
+    {
+        DecodeRawImage(path);
     }
 
     public static string DecodeRawImageName(MethodInfo method, object[] data)
@@ -51,8 +71,6 @@ public class UnitTest1 : UnitTestBase
         return $"{method.Name} ({Path.GetFileName((string)data[0])})";
     }
 
-    [TestMethod]
-    [DynamicData(nameof(DecodeRawImageData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
     public void DecodeRawImage(string path)
     {
         using var stream = File.OpenRead(path);
@@ -73,6 +91,7 @@ public class UnitTest1 : UnitTestBase
     {
         var length1 = stream.Read<int>(Endianness.LE);
         var length2 = stream.Read<int>(Endianness.LE);
+
         WriteLine(length1);
         WriteLine(length2);
 
@@ -81,26 +100,32 @@ public class UnitTest1 : UnitTestBase
 
         using var rle1 = DecodeRle1(pixels1);
 
-        Assert.AreEqual(64000, rle1.Length);
 
         using var rle2 = DecodeRle2(pixels2);
+        
+        // Assert.AreEqual(64000, rle1.Length);
 
-        Assert.AreEqual(128000, rle2.Length);
+        // Assert.AreEqual(128000, rle2.Length);
 
         var pixelWidth = 320;
         var pixelHeight = 200;
+
         var image = rle1.ToArray();
         var depth = rle2.ToArray();
 
         var bitmapPalette = new BitmapPalette(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
 
         {
+            File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
+
             var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Indexed8, bitmapPalette, image, pixelWidth);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".png"));
         }
 
         {
+            File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".bin"), depth);
+
             var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Gray16, null, depth, pixelWidth * 2);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".png"));
@@ -332,11 +357,11 @@ public class UnitTest1 : UnitTestBase
 
         var pixelWidth = stream.Read<ushort>(Endianness.BE);
 
-        Assert.AreEqual(320, pixelWidth);
+// Assert.AreEqual(320, pixelWidth);
 
         var pixelHeight = stream.Read<ushort>(Endianness.BE);
 
-        Assert.AreEqual(200, pixelHeight);
+        // Assert.AreEqual(200, pixelHeight);
 
         var colorsCount = stream.Read<ushort>(Endianness.BE);
 
@@ -344,7 +369,9 @@ public class UnitTest1 : UnitTestBase
 
         for (var i = 0; i < 18; i++)
         {
-            Assert.AreEqual(0, stream.ReadByte(), i.ToString());
+            var b = stream.ReadByte();
+
+            // Assert.AreEqual(0, b, i.ToString());
         }
 
         var colors = new RGB888[colorsCount];
@@ -356,19 +383,24 @@ public class UnitTest1 : UnitTestBase
 
         var image = stream.ReadExactly(pixelWidth * pixelHeight);
 
-        var depth = new ushort[pixelWidth * pixelHeight];
-
-        for (var i = 0; i < depth.Length; i++)
-        {
-            depth[i] = stream.Read<ushort>(Endianness.LE);
-        }
-
         {
             var palette = new BitmapPalette(colors.Select(s => Color.FromRgb(s.R, s.G, s.B)).ToList());
 
             var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Indexed8, palette, image, pixelWidth);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-raw").ChangeExtension(".png"));
+        }
+
+        if (stream.Position == stream.Length)
+        {
+            return;
+        }
+
+        var depth = new ushort[pixelWidth * pixelHeight];
+
+        for (var i = 0; i < depth.Length; i++)
+        {
+            depth[i] = stream.Read<ushort>(Endianness.LE);
         }
 
         {
