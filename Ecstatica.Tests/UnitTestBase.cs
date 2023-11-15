@@ -1,6 +1,6 @@
 namespace Ecstatica.Tests;
 
-public class UnitTestBase
+public abstract class UnitTestBase
 {
     public required TestContext TestContext { get; set; }
 

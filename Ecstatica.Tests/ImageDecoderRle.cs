@@ -1,138 +1,13 @@
-using System.IO;
-using System.Reflection;
+﻿using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Whatever.Extensions;
 
-// ReSharper disable StringLiteralTypo
-
 namespace Ecstatica.Tests;
 
-[TestClass]
-public class UnitTest1 : UnitTestBase
+public static class ImageDecoderRle
 {
-    private const string SourceDirectory = @"C:\Temp\Ecstatica";
-
-    private static BitmapPalette Palette { get; } = new(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
-
-    private bool DebugRleBin { get; } = false;
-
-    public static IEnumerable<object[]> DecodeGraphicsData()
-    {
-        return EnumerateFiles(Path.Combine(SourceDirectory, "GRAPHICS"), "*.RAW");
-    }
-
-    public static IEnumerable<object[]> DecodeHiResData()
-    {
-        return EnumerateFiles(Path.Combine(SourceDirectory, "HIRES"), "*.RAW");
-    }
-
-    public static IEnumerable<object[]> DecodeLowGraphData()
-    {
-        return EnumerateFiles(Path.Combine(SourceDirectory, "LOWGRAPH"), "*.RAW");
-    }
-
-    public static IEnumerable<object[]> DecodeViewsData()
-    {
-        return EnumerateFiles(Path.Combine(SourceDirectory, "VIEWS"), "*.RAW");
-    }
-
-    private static IEnumerable<object[]> EnumerateFiles(string path, string searchPattern)
-    {
-        return Directory.EnumerateFiles(path, searchPattern).Select(s => new object[] { s });
-    }
-
-    [TestMethod]
-    [DynamicData(nameof(DecodeGraphicsData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
-    public void DecodeGraphics(string path)
-    {
-        DecodeRawImage(path);
-    }
-
-    [TestMethod]
-    [DynamicData(nameof(DecodeHiResData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
-    public void DecodeHiRes(string path)
-    {
-        DecodeRawImage(path);
-    }
-
-    [TestMethod]
-    [DynamicData(nameof(DecodeLowGraphData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
-    public void DecodeLowGraph(string path)
-    {
-        DecodeRawImage(path);
-    }
-
-    [TestMethod]
-    [DynamicData(nameof(DecodeViewsData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(DecodeRawImageName))]
-    public void DecodeViews(string path)
-    {
-        DecodeRawImage(path);
-    }
-
-    public static string DecodeRawImageName(MethodInfo method, object[] data)
-    {
-        return $"{method.Name} ({Path.GetFileName((string)data[0])})";
-    }
-
-    public void DecodeRawImage(string path)
-    {
-        using var stream = File.OpenRead(path);
-
-        var type = stream.Read<ushort>(Endianness.BE);
-
-        if (type == 0x6D68) // "mh"
-        {
-            ExtractRaw(stream);
-        }
-        else
-        {
-            ExtractRle(stream);
-        }
-    }
-
-    private void ExtractRle(FileStream stream)
-    {
-        var length1 = stream.Read<int>(Endianness.LE);
-        var length2 = stream.Read<int>(Endianness.LE);
-
-        var pixels1 = stream.ReadExactly(length1);
-        var pixels2 = stream.ReadExactly(length2);
-
-        using var rle1 = DecodeRle1(pixels1);
-        using var rle2 = DecodeRle2(pixels2);
-
-        var image = rle1.ToArray();
-        var depth = rle2.ToArray();
-
-        {
-            var size = GetRleImageSize(depth.Length);
-
-            if (DebugRleBin)
-            {
-                File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
-            }
-
-            var source = BitmapSource.Create(size.W, size.H, 96, 96, PixelFormats.Indexed8, Palette, image, size.W);
-
-            WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".png"));
-        }
-
-        {
-            var size = GetRleImageSize(depth.Length);
-
-            if (DebugRleBin)
-            {
-                File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".bin"), depth);
-            }
-
-            var source = BitmapSource.Create(size.Item1, size.Item2, 96, 96, PixelFormats.Gray16, null, depth, size.Item1 * 2);
-
-            WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".png"));
-        }
-    }
-
-    private static (int W, int H) GetRleImageSize(int length)
+    public static (int W, int H) GetRleImageSize(int length)
     {
         return length switch
         {
@@ -142,7 +17,7 @@ public class UnitTest1 : UnitTestBase
         };
     }
 
-    private static MemoryStream DecodeRle1(Span<byte> data)
+    public static MemoryStream DecodeRle1(Span<byte> data)
     {
         var bytedata = data;
         var @out = new MemoryStream();
@@ -247,7 +122,7 @@ public class UnitTest1 : UnitTestBase
         return @out;
     }
 
-    private static MemoryStream DecodeRle2(Span<byte> data)
+    public static MemoryStream DecodeRle2(Span<byte> data)
     {
         var bytedata = data;
         var @out = new MemoryStream();
@@ -354,73 +229,44 @@ public class UnitTest1 : UnitTestBase
         return @out;
     }
 
-    private static void ExtractRaw(FileStream stream)
+    public static void ExtractRle(FileStream stream)
     {
-        var magic = stream.ReadStringAscii(4);
+        var length1 = stream.Read<int>(Endianness.LE);
+        var length2 = stream.Read<int>(Endianness.LE);
 
-        Assert.AreEqual("wanh", magic);
+        var pixels1 = stream.ReadExactly(length1);
+        var pixels2 = stream.ReadExactly(length2);
 
-        var unknown = stream.Read<ushort>(Endianness.BE);
+        using var rle1 = DecodeRle1(pixels1);
+        using var rle2 = DecodeRle2(pixels2);
 
-        Assert.AreEqual(4, unknown);
-
-        var pw = stream.Read<ushort>(Endianness.BE);
-        var ph = stream.Read<ushort>(Endianness.BE);
-        var cc = stream.Read<ushort>(Endianness.BE);
-
-        Assert.AreEqual(256, cc);
-
-        for (var i = 0; i < 18; i++)
-        {
-            var b = stream.ReadByte(); // TODO not always 0
-        }
-
-        var colors = new RGB888[cc];
-
-        for (var i = 0; i < colors.Length; i++)
-        {
-            colors[i] = stream.Read<RGB888>(Endianness.LE);
-        }
-
-        var image = stream.ReadExactly(pw * ph);
+        var image = rle1.ToArray();
+        var depth = rle2.ToArray();
 
         {
-            var palette = new BitmapPalette(colors.Select(s => Color.FromRgb(s.R, s.G, s.B)).ToList());
+            var size = GetRleImageSize(depth.Length);
 
-            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Indexed8, palette, image, pw);
+            if (UnitTestImage.DebugRleBin)
+            {
+                File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
+            }
 
-            WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-raw").ChangeExtension(".png"));
-        }
+            var source = BitmapSource.Create(size.W, size.H, 96, 96, PixelFormats.Indexed8, UnitTestImage.Palette, image, size.W);
 
-        if (stream.Position == stream.Length)
-        {
-            return; // TODO clarify
-        }
-
-        var depth = new ushort[pw * ph];
-
-        for (var i = 0; i < depth.Length; i++)
-        {
-            depth[i] = stream.Read<ushort>(Endianness.LE);
+            ImageDecoder.WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".png"));
         }
 
         {
-            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Gray16, null, depth, pw * 2);
+            var size = GetRleImageSize(depth.Length);
 
-            WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-raw").ChangeExtension(".png"));
+            if (UnitTestImage.DebugRleBin)
+            {
+                File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".bin"), depth);
+            }
+
+            var source = BitmapSource.Create(size.Item1, size.Item2, 96, 96, PixelFormats.Gray16, null, depth, size.Item1 * 2);
+
+            ImageDecoder.WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".png"));
         }
-    }
-
-    private static void WritePng(BitmapSource bitmapSource, string path)
-    {
-        var encoder = new PngBitmapEncoder();
-
-        var frame = BitmapFrame.Create(bitmapSource);
-
-        encoder.Frames.Add(frame);
-
-        using var stream = File.Create(path);
-
-        encoder.Save(stream);
     }
 }
