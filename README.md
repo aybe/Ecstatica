@@ -12,11 +12,11 @@ The project solely consists of unit tests and is Windows-only compatible for now
 
 ## Gallery
 
-![](.docs\0099-depth-raw.png)
+![](https://github.com/aybe/Ecstatica/blob/master/.docs/0099-depth-raw.png)
 
-![](.docs\0099-image-raw.png)
+![](https://github.com/aybe/Ecstatica/blob/master/.docs/0099-image-raw.png)
 
-![](.docs\0096-depth-rle.png)
+![](https://github.com/aybe/Ecstatica/blob/master/.docs/0096-depth-rle.png)
 
-![](.docs\0096-image-rle.png)
+![](https://github.com/aybe/Ecstatica/blob/master/.docs/0096-image-rle.png)
 
