@@ -106,7 +106,7 @@ public class UnitTest1 : UnitTestBase
         var depth = rle2.ToArray();
 
         {
-            GetRleImageDimensions(image.Length, 320, 200, 640, 200, out var pw, out var ph);
+            GetRleImageDimensions(image.Length, 320, 200, 640, 480, out var pw, out var ph);
 
             if (DebugRleBin)
             {
@@ -119,7 +119,7 @@ public class UnitTest1 : UnitTestBase
         }
 
         {
-            GetRleImageDimensions(depth.Length, 320, 200, 640, 100, out var pw, out var ph);
+            GetRleImageDimensions(depth.Length, 320, 200, 640, 480, out var pw, out var ph);
 
             if (DebugRleBin)
             {
@@ -164,7 +164,7 @@ public class UnitTest1 : UnitTestBase
         var pos = 0;
         var lastcolor = 0;
 
-        while (pos < bytedata.Length && @out.Length < maxlen)
+        while (pos < bytedata.Length /*&& @out.Length < maxlen*/)
         {
             var typeval = bytedata[pos] & 0x03;
             var runlength = bytedata[pos] >> 2;
@@ -270,7 +270,7 @@ public class UnitTest1 : UnitTestBase
         var pos = 0;
         var lastcolor = 0;
         var writer = new BinaryWriter(@out);
-        while (pos < bytedata.Length && @out.Length < maxlen)
+        while (pos < bytedata.Length /*&& @out.Length < maxlen*/)
         {
             var typeval = bytedata[pos] & 0x03;
             var runlength = bytedata[pos] >> 2;
