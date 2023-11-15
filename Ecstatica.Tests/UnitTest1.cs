@@ -15,7 +15,7 @@ public class UnitTest1 : UnitTestBase
 
     private static BitmapPalette Palette { get; } = new(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
 
-    private bool DebugRleBin { get; }
+    private bool DebugRleBin { get; } = false;
 
     public static IEnumerable<object[]> DecodeGraphicsData()
     {
@@ -375,52 +375,44 @@ public class UnitTest1 : UnitTestBase
 
         Assert.AreEqual("wanh", magic);
 
-        var read = stream.Read<ushort>(Endianness.BE);
+        var unknown = stream.Read<ushort>(Endianness.BE);
 
-        Assert.AreEqual(4, read);
+        Assert.AreEqual(4, unknown);
 
-        var pixelWidth = stream.Read<ushort>(Endianness.BE);
+        var pw = stream.Read<ushort>(Endianness.BE);
+        var ph = stream.Read<ushort>(Endianness.BE);
+        var cc = stream.Read<ushort>(Endianness.BE);
 
-// Assert.AreEqual(320, pixelWidth);
-
-        var pixelHeight = stream.Read<ushort>(Endianness.BE);
-
-        // Assert.AreEqual(200, pixelHeight);
-
-        var colorsCount = stream.Read<ushort>(Endianness.BE);
-
-        Assert.AreEqual(256, colorsCount);
+        Assert.AreEqual(256, cc);
 
         for (var i = 0; i < 18; i++)
         {
-            var b = stream.ReadByte();
-
-            // Assert.AreEqual(0, b, i.ToString());
+            var b = stream.ReadByte(); // TODO not always 0
         }
 
-        var colors = new RGB888[colorsCount];
+        var colors = new RGB888[cc];
 
         for (var i = 0; i < colors.Length; i++)
         {
             colors[i] = stream.Read<RGB888>(Endianness.LE);
         }
 
-        var image = stream.ReadExactly(pixelWidth * pixelHeight);
+        var image = stream.ReadExactly(pw * ph);
 
         {
             var palette = new BitmapPalette(colors.Select(s => Color.FromRgb(s.R, s.G, s.B)).ToList());
 
-            var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Indexed8, palette, image, pixelWidth);
+            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Indexed8, palette, image, pw);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-raw").ChangeExtension(".png"));
         }
 
         if (stream.Position == stream.Length)
         {
-            return;
+            return; // TODO clarify
         }
 
-        var depth = new ushort[pixelWidth * pixelHeight];
+        var depth = new ushort[pw * ph];
 
         for (var i = 0; i < depth.Length; i++)
         {
@@ -428,7 +420,7 @@ public class UnitTest1 : UnitTestBase
         }
 
         {
-            var source = BitmapSource.Create(pixelWidth, pixelHeight, 96, 96, PixelFormats.Gray16, null, depth, pixelWidth * 2);
+            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Gray16, null, depth, pw * 2);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-raw").ChangeExtension(".png"));
         }
@@ -445,11 +437,5 @@ public class UnitTest1 : UnitTestBase
         using var stream = File.Create(path);
 
         encoder.Save(stream);
-    }
-
-    private enum RawImageResolution
-    {
-        Lo,
-        Hi
     }
 }
