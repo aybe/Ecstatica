@@ -94,45 +94,17 @@ public class UnitTest1 : UnitTestBase
         var length1 = stream.Read<int>(Endianness.LE);
         var length2 = stream.Read<int>(Endianness.LE);
 
-        WriteLine(length1);
-        WriteLine(length2);
-
         var pixels1 = stream.ReadExactly(length1);
         var pixels2 = stream.ReadExactly(length2);
 
         using var rle1 = DecodeRle1(pixels1);
         using var rle2 = DecodeRle2(pixels2);
 
-        var rle1Length = rle1.Length;
-        var rle2Length = rle2.Length;
-
         var image = rle1.ToArray();
         var depth = rle2.ToArray();
 
         {
-            var dst1 = Math.Abs(rle1Length - 64000);
-            var dst2 = Math.Abs(rle1Length - 128000);
-
-            var res1 = true switch
-            {
-                true when dst1 < dst2 => RawImageResolution.Lo,
-                true when dst2 < dst1 => RawImageResolution.Hi,
-                _                     => throw new InvalidOperationException()
-            };
-
-            var pw = res1 switch
-            {
-                RawImageResolution.Lo => 320,
-                RawImageResolution.Hi => 640,
-                _                     => throw new InvalidOperationException()
-            };
-
-            var ph = res1 switch
-            {
-                RawImageResolution.Lo => 200,
-                RawImageResolution.Hi => 200,
-                _                     => throw new InvalidOperationException()
-            };
+            GetRleImageDimensions(image.Length, 320, 200, 640, 200, out var pw, out var ph);
 
             if (DebugRleBin)
             {
@@ -147,29 +119,7 @@ public class UnitTest1 : UnitTestBase
         }
 
         {
-            var dst1 = Math.Abs(rle2Length - 64000);
-            var dst2 = Math.Abs(rle2Length - 128000);
-
-            var res1 = true switch
-            {
-                true when dst1 < dst2 => RawImageResolution.Lo,
-                true when dst2 < dst1 => RawImageResolution.Hi,
-                _                     => throw new InvalidOperationException()
-            };
-
-            var pw = res1 switch
-            {
-                RawImageResolution.Lo => 320,
-                RawImageResolution.Hi => 640,
-                _                     => throw new InvalidOperationException()
-            };
-
-            var ph = res1 switch
-            {
-                RawImageResolution.Lo => 200,
-                RawImageResolution.Hi => 100,
-                _                     => throw new InvalidOperationException()
-            };
+            GetRleImageDimensions(depth.Length, 320, 200, 640, 100, out var pw, out var ph);
 
             if (DebugRleBin)
             {
@@ -180,6 +130,30 @@ public class UnitTest1 : UnitTestBase
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".png"));
         }
+    }
+
+    private static void GetRleImageDimensions(long length, int w1, int h1, int w2, int h2, out int pw, out int ph)
+    {
+        var a1 = Math.Abs(length - 64000);
+        var a2 = Math.Abs(length - 128000);
+
+        if (a1 < a2)
+        {
+            pw = w1;
+            ph = h1;
+            return;
+        }
+
+        if (a2 < a1)
+        {
+            pw = w2;
+            ph = h2;
+            return;
+        }
+
+        var message = $"Failed to determine image dimensions for length {length}.";
+
+        throw new InvalidOperationException(message);
     }
 
     private static MemoryStream DecodeRle1(Span<byte> data)
