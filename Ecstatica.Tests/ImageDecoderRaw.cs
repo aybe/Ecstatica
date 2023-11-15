@@ -11,7 +11,7 @@ public static class ImageDecoderRaw
     {
         var magic = stream.ReadStringAscii(4);
 
-        Assert.AreEqual("wanh", magic);
+        Assert.AreEqual("wanh", magic); // TODO
 
         var unknown = stream.Read<ushort>(Endianness.BE);
 

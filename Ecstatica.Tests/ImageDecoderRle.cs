@@ -7,7 +7,9 @@ namespace Ecstatica.Tests;
 
 public static class ImageDecoderRle
 {
-    public static (int W, int H) GetRleImageSize(int length)
+    private static bool DebugRleBin { get; } = false;
+
+    private static (int W, int H) GetRleImageSize(int length)
     {
         return length switch
         {
@@ -17,7 +19,7 @@ public static class ImageDecoderRle
         };
     }
 
-    public static MemoryStream DecodeRle1(Span<byte> data)
+    private static MemoryStream DecodeRle1(Span<byte> data)
     {
         var bytedata = data;
         var @out = new MemoryStream();
@@ -122,7 +124,7 @@ public static class ImageDecoderRle
         return @out;
     }
 
-    public static MemoryStream DecodeRle2(Span<byte> data)
+    private static MemoryStream DecodeRle2(Span<byte> data)
     {
         var bytedata = data;
         var @out = new MemoryStream();
@@ -244,27 +246,27 @@ public static class ImageDecoderRle
         var depth = rle2.ToArray();
 
         {
-            var size = GetRleImageSize(depth.Length);
+            var (w, h) = GetRleImageSize(depth.Length);
 
-            if (UnitTestImage.DebugRleBin)
+            if (DebugRleBin)
             {
                 File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
             }
 
-            var source = BitmapSource.Create(size.W, size.H, 96, 96, PixelFormats.Indexed8, UnitTestImage.Palette, image, size.W);
+            var source = BitmapSource.Create(w, h, 96, 96, PixelFormats.Indexed8, UnitTestImage.Palette, image, w);
 
             ImageDecoder.WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".png"));
         }
 
         {
-            var size = GetRleImageSize(depth.Length);
+            var (w, h) = GetRleImageSize(depth.Length);
 
-            if (UnitTestImage.DebugRleBin)
+            if (DebugRleBin)
             {
                 File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".bin"), depth);
             }
 
-            var source = BitmapSource.Create(size.Item1, size.Item2, 96, 96, PixelFormats.Gray16, null, depth, size.Item1 * 2);
+            var source = BitmapSource.Create(w, h, 96, 96, PixelFormats.Gray16, null, depth, w * 2);
 
             ImageDecoder.WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".png"));
         }

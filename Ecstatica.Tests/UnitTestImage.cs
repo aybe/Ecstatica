@@ -3,8 +3,6 @@ using System.Reflection;
 using System.Windows.Media.Imaging;
 using Whatever.Extensions;
 
-// ReSharper disable StringLiteralTypo
-
 namespace Ecstatica.Tests;
 
 public class UnitTestImage : UnitTestBase
@@ -13,14 +11,10 @@ public class UnitTestImage : UnitTestBase
 
     public static BitmapPalette Palette { get; } = new(Constants.Graphics.GetPalette().Select(s => s.ToColor()).ToList());
 
-    public static bool DebugRleBin { get; } = false;
-
-
     protected static IEnumerable<object[]> EnumerateFiles(string path, string searchPattern)
     {
         return Directory.EnumerateFiles(path, searchPattern).Select(s => new object[] { s });
     }
-
 
     public static string DecodeRawImageName(MethodInfo method, object[] data)
     {

@@ -1,7 +1,9 @@
 ﻿using System.Windows.Media;
+using JetBrains.Annotations;
 
 namespace Ecstatica.Tests;
 
+[PublicAPI]
 public static class ColorExtensions
 {
     public static Color ToColor(this RGB555 value)

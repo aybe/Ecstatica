@@ -1,8 +1,10 @@
+using JetBrains.Annotations;
+
 namespace Ecstatica.Tests;
 
 public abstract class UnitTestBase
 {
-    public required TestContext TestContext { get; set; }
+    [PublicAPI] public required TestContext TestContext { get; set; }
 
     public void WriteLine(object? value = null)
     {
