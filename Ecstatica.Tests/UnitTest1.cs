@@ -106,65 +106,50 @@ public class UnitTest1 : UnitTestBase
         var depth = rle2.ToArray();
 
         {
-            GetRleImageDimensions(image.Length, 320, 200, 640, 480, out var pw, out var ph);
+            var size = GetRleImageSize(depth.Length);
 
             if (DebugRleBin)
             {
                 File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".bin"), image);
             }
 
-            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Indexed8, Palette, image, pw);
+            var source = BitmapSource.Create(size.W, size.H, 96, 96, PixelFormats.Indexed8, Palette, image, size.W);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-image-rle").ChangeExtension(".png"));
         }
 
         {
-            GetRleImageDimensions(depth.Length, 320, 200, 640, 480, out var pw, out var ph);
+            var size = GetRleImageSize(depth.Length);
 
             if (DebugRleBin)
             {
                 File.WriteAllBytes(new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".bin"), depth);
             }
 
-            var source = BitmapSource.Create(pw, ph, 96, 96, PixelFormats.Gray16, null, depth, pw * 2);
+            var source = BitmapSource.Create(size.Item1, size.Item2, 96, 96, PixelFormats.Gray16, null, depth, size.Item1 * 2);
 
             WritePng(source, new FilePath(stream.Name).AppendToFileName("-depth-rle").ChangeExtension(".png"));
         }
     }
 
-    private static void GetRleImageDimensions(long length, int w1, int h1, int w2, int h2, out int pw, out int ph)
+    private static (int W, int H) GetRleImageSize(int length)
     {
-        var a1 = Math.Abs(length - 64000);
-        var a2 = Math.Abs(length - 128000);
-
-        if (a1 < a2)
+        return length switch
         {
-            pw = w1;
-            ph = h1;
-            return;
-        }
-
-        if (a2 < a1)
-        {
-            pw = w2;
-            ph = h2;
-            return;
-        }
-
-        var message = $"Failed to determine image dimensions for length {length}.";
-
-        throw new InvalidOperationException(message);
+            128000 => (320, 200),
+            614400 => (640, 480),
+            _      => throw new NotSupportedException(length.ToString())
+        };
     }
 
     private static MemoryStream DecodeRle1(Span<byte> data)
     {
-        var maxlen = 128000;
         var bytedata = data;
         var @out = new MemoryStream();
         var pos = 0;
         var lastcolor = 0;
 
-        while (pos < bytedata.Length /*&& @out.Length < maxlen*/)
+        while (pos < bytedata.Length)
         {
             var typeval = bytedata[pos] & 0x03;
             var runlength = bytedata[pos] >> 2;
@@ -264,13 +249,13 @@ public class UnitTest1 : UnitTestBase
 
     private static MemoryStream DecodeRle2(Span<byte> data)
     {
-        var maxlen = 128000;
         var bytedata = data;
         var @out = new MemoryStream();
         var pos = 0;
         var lastcolor = 0;
         var writer = new BinaryWriter(@out);
-        while (pos < bytedata.Length /*&& @out.Length < maxlen*/)
+
+        while (pos < bytedata.Length)
         {
             var typeval = bytedata[pos] & 0x03;
             var runlength = bytedata[pos] >> 2;
